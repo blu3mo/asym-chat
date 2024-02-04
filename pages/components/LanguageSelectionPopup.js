@@ -8,7 +8,7 @@ const LanguageSelectionPopup = ({ onSave, initialUserALanguage, initialUserBLang
     <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center">
       <div className="bg-white p-5 rounded-lg">
         <div className="mb-4">
-          <label htmlFor="popupUserALanguage" className="mr-2">User A Language:</label>
+          <label htmlFor="popupUserALanguage" className="mr-2">User A Topic:</label>
           <input
             id="popupUserALanguage"
             type="text"
@@ -19,7 +19,7 @@ const LanguageSelectionPopup = ({ onSave, initialUserALanguage, initialUserBLang
           />
         </div>
         <div className="mb-4">
-          <label htmlFor="popupUserBLanguage" className="mr-2">User B Language:</label>
+          <label htmlFor="popupUserBLanguage" className="mr-2">User B Topic:</label>
           <input
             id="popupUserBLanguage"
             type="text"
