@@ -1,7 +1,7 @@
 // components/ChatPane.js
-function ChatPane({ title, messages, message, setMessage, sendMessage, buttonColor }) {
+function ChatPane({ title, messages, message, setMessage, sendMessage, buttonColor, isLoading }) {
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
       e.preventDefault();
       sendMessage(message);
     }
@@ -27,12 +27,14 @@ function ChatPane({ title, messages, message, setMessage, sendMessage, buttonCol
           onKeyPress={handleKeyPress}
           placeholder="Type a message..."
           className="w-full p-2 border rounded"
+          disabled={isLoading} // Disable input field when loading
         />
         <button
           onClick={() => sendMessage(message)}
-          className={`${buttonColor} mt-2 w-full text-white font-bold py-2 rounded`}
+          className={`${buttonColor} mt-2 w-full text-white font-bold py-2 rounded ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={isLoading} // Disable button when loading
         >
-          Send
+          {isLoading ? 'Sending...' : 'Send'} {/* Change button text based on loading state */}
         </button>
       </div>
     </div>

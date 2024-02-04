@@ -45,6 +45,8 @@ export default function Home() {
   const [userBMessage, setUserBMessage] = useState('');
   const [userALanguage, setUserALanguage] = useState('コーヒー');
   const [userBLanguage, setUserBLanguage] = useState('建築');
+  const [isUserALoading, setIsUserALoading] = useState(false);
+  const [isUserBLoading, setIsUserBLoading] = useState(false);
 
   useEffect(() => {
     // Optionally, you can trigger the popup based on a condition,
@@ -59,6 +61,12 @@ export default function Home() {
 
   const sendMessage = async (user, message) => {
     if (message.trim() === '') return;
+
+    if (user === 'User A') {
+      setIsUserALoading(true); // Start loading
+    } else {
+      setIsUserBLoading(true); // Start loading
+    }
   
     // Determine the source and target languages based on the user
     const originalLang = user === 'User A' ? userALanguage : userBLanguage;
@@ -99,6 +107,12 @@ export default function Home() {
     } else {
       setUserBMessage('');
     }
+
+    if (user === 'User A') {
+      setIsUserALoading(false); // End loading
+    } else {
+      setIsUserBLoading(false); // End loading
+    }
   };
   
 
@@ -134,6 +148,7 @@ export default function Home() {
           setMessage={setUserAMessage}
           sendMessage={() => sendMessage('User A', userAMessage)}
           buttonColor="bg-green-500 hover:bg-green-700"
+          isLoading={isUserALoading} // Add this line
         />
         <div className="w-0.5 bg-gray-300"></div>
         <ChatPane
@@ -143,7 +158,9 @@ export default function Home() {
           setMessage={setUserBMessage}
           sendMessage={() => sendMessage('User B', userBMessage)}
           buttonColor="bg-blue-500 hover:bg-blue-700"
+          isLoading={isUserBLoading} // Add this line
         />
+        
       </div>
     </div>
   );
