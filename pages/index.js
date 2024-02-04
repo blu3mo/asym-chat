@@ -4,10 +4,10 @@ import ChatPane from './components/ChatPane';
 import LanguageSelectionPopup from './components/LanguageSelectionPopup';
 
 // Updated translateMessage function
-const translateMessage = async (chatLog, newChatMessage, originalLang, newLang) => {
+const translateMessage = async (conversionLog, newChatMessage, originalLang, newLang) => {
   try {
     console.log(JSON.stringify({
-      chatLog,
+      conversionLog,
       newChatMessage,
       originalLang,
       newLang,
@@ -18,7 +18,7 @@ const translateMessage = async (chatLog, newChatMessage, originalLang, newLang) 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        chatLog,
+        conversionLog,
         newChatMessage,
         originalLang,
         newLang,
@@ -43,8 +43,8 @@ export default function Home() {
   const [userBMessages, setUserBMessages] = useState([]);
   const [userAMessage, setUserAMessage] = useState('');
   const [userBMessage, setUserBMessage] = useState('');
-  const [userALanguage, setUserALanguage] = useState('en');
-  const [userBLanguage, setUserBLanguage] = useState('ja');
+  const [userALanguage, setUserALanguage] = useState('コーヒー');
+  const [userBLanguage, setUserBLanguage] = useState('建築');
 
   useEffect(() => {
     // Optionally, you can trigger the popup based on a condition,
@@ -67,9 +67,17 @@ export default function Home() {
     // Call translateMessage only if languages are different
     let translatedMessage = message;
     if (originalLang !== newLang) {
-      // Assuming you might want to pass the entire conversation as chatLog
-      const chatLog = user === 'User A' ? userAMessages.map(m => m.text).join('\n') : userBMessages.map(m => m.text).join('\n');
-      translatedMessage = await translateMessage(chatLog, message, originalLang, newLang);
+      // Take the last 3 messages and create a *dictionary* of original to translated messages
+      const conversionLog = {}
+      for (let i = 0; i < userAMessages.length; i++) {
+        if (user === 'User A') {
+          conversionLog[userAMessages[i].text] = userBMessages[i].text;
+        } else {
+          conversionLog[userBMessages[i].text] = userAMessages[i].text;
+        }
+      }
+
+      translatedMessage = await translateMessage(conversionLog, message, originalLang, newLang);
     }
   
     // Construct new message object for User A and User B
@@ -109,11 +117,11 @@ export default function Home() {
 
       <header className="p-4 bg-gray-200 flex justify-between items-center">
         <div className="flex items-center">
-          <label htmlFor="userALanguage" className="mr-2 font-bold">User A Language:</label>
+          <label htmlFor="userALanguage" className="mr-2 font-bold">User A Topic:</label>
           <span className="px-2 py-1 bg-green-300 rounded text-green-900">{userALanguage}</span>
         </div>
         <div className="flex items-center">
-          <label htmlFor="userBLanguage" className="mr-2 font-bold">User B Language:</label>
+          <label htmlFor="userBLanguage" className="mr-2 font-bold">User B Topic:</label>
           <span className="px-2 py-1 bg-blue-200 rounded text-blue-900">{userBLanguage}</span>
         </div>
       </header>
