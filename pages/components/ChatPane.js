@@ -11,7 +11,7 @@ function ChatPane({ title, messages, message, setMessage, sendMessage, buttonCol
     <div className="flex-1 flex flex-col m-2">
       <h2 className="text-lg font-semibold text-center">{title}</h2>
       <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
-        {messages.map((msg, index) => (
+        {messages && messages.length > 0 && messages.map((msg, index) => (
           <div key={index} className={`max-w-xs ${msg.from === title ? 'self-end bg-green-200' : 'self-start bg-blue-200'} rounded-lg p-2`}>
             <p className={`${msg.from === title ? 'text-green-900' : 'text-blue-900'}`}>
               {msg.text}
