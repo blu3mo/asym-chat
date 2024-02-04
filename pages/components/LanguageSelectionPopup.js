@@ -14,7 +14,7 @@ const LanguageSelectionPopup = ({ onSave, initialUserALanguage, initialUserBLang
             type="text"
             value={userALanguage}
             onChange={(e) => setUserALanguage(e.target.value)}
-            placeholder="e.g., en"
+            placeholder="e.g., Coffee"
             className="p-1 border rounded"
           />
         </div>
@@ -25,7 +25,7 @@ const LanguageSelectionPopup = ({ onSave, initialUserALanguage, initialUserBLang
             type="text"
             value={userBLanguage}
             onChange={(e) => setUserBLanguage(e.target.value)}
-            placeholder="e.g., es"
+            placeholder="e.g., Architecture"
             className="p-1 border rounded"
           />
         </div>
