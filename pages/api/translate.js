@@ -28,6 +28,10 @@ async function translateText(conversionLog, newChatMessage, originalLang, newLan
       'role': 'system',
       'content': `You are a topic translator that convert chat of one topic to another topic. Convert the topic of following text from ${originalLang} to ${newLang}. Keep the sentence structure as much as possible, while also maintaining the consistency of the conversation.`
     },
+    // {
+    //   'role': 'system',
+    //   'content': `Edit the following message to adjust the audience from ${originalLang} to ${newLang}. The goal is to bridge the communication barrier between people with different knowledges.Keep the core message of the text, while adjusting the non-important part to make it more understandable for the audience. Make the language natural.`
+    // },
     ...previousLog,
     {
       'role': 'user',

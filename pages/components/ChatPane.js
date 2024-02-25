@@ -1,12 +1,72 @@
+import React, { useState, useEffect } from 'react';
+import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
+
+// Function to extract location names from messages
+const extractLocations = (messages) => {
+  const locationRegex = /loc\(([^)]+)\)/g;
+  let match;
+  const locations = [];
+  messages.forEach(msg => {
+    while ((match = locationRegex.exec(msg.text)) !== null) {
+      locations.push(match[1]);
+    }
+  });
+  return locations;
+};
+
+// This is a client-side implementation. For production, consider moving API calls to the server side.
+const getCoordinatesForLocation = async (locationName) => {
+  const apiKey = "AIzaSyCfBpSNlz8Mc94IVratPDYbNLHJVNbgBLM"; // Replace with your actual API key
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(locationName)}&key=${apiKey}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.status === "OK" && data.results.length > 0) {
+      const { lat, lng } = data.results[0].geometry.location;
+      return { lat, lng };
+    } else {
+      // Handle the case where the location was not found or another error occurred
+      console.error("Geocoding API error:", data.status);
+      return null;
+    }
+  } catch (error) {
+    console.error("Failed to fetch coordinates:", error);
+    return null;
+  }
+};
+
+//const tailwindColors = ['red', 'yellow', 'green', 'blue', 'indigo', 'purple', 'pink'];
+const tailwindBgColors = ['bg-red-400', 'bg-yellow-500', 'bg-green-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500'];
+const tailwindLightBgColors = ['bg-red-200', 'bg-yellow-200', 'bg-green-200', 'bg-blue-200', 'bg-indigo-200', 'bg-purple-200', 'bg-pink-200'];
+const tailwindTextColors = ['text-red-800', 'text-yellow-800', 'text-green-800', 'text-blue-800', 'text-indigo-800', 'text-purple-800', 'text-pink-800'];
+
 function ChatPane({
   title,
+  topic,
   messages,
   message,
   setMessage,
   sendMessage,
-  buttonColor,
+  userIndex,
   isLoading,
 }) {
+  const [locations, setLocations] = useState([]);
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: "AIzaSyCfBpSNlz8Mc94IVratPDYbNLHJVNbgBLM", // Replace with your Google Maps API key
+  });
+
+  useEffect(() => {
+    const locationNames = extractLocations(messages);
+    const locationPromises = locationNames.map(name => getCoordinatesForLocation(name));
+    Promise.all(locationPromises).then(setLocations);
+  }, [messages]);
+
+  const mapContainerStyle = {
+    height: "400px",
+    width: "100%",
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
       e.preventDefault();
@@ -16,40 +76,58 @@ function ChatPane({
 
   // Function to determine message background color based on the sender
   const getMessageBgColor = (msgFrom) => {
-    return msgFrom === title ? `${buttonColor}` : 'bg-gray-100'; // Lighter gray for non-own messages
+    return msgFrom === title ? tailwindBgColors[userIndex % tailwindBgColors.length] : 'bg-gray-100'; // Lighter gray for non-own messages
   };
 
   return (
-    <div className="flex-1 flex flex-col m-2 bg-white shadow-lg rounded-lg">
-      <h2 className="text-lg font-semibold text-center py-2 border-b">{title}</h2>
-      <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
-        {messages && messages.length > 0 && messages.map((msg, index) => (
-          <div key={index} className={`max-w-xs ${getMessageBgColor(msg.from)} self-start rounded-lg p-2 shadow ${msg.from === title ? 'self-end' : ''}`}>
-            <p className={`${msg.from === title ? 'text-white' : 'text-gray-800'}`}> {/* Improved text readability */}
-              {msg.text}
-            </p>
-          </div>
+      <div className="flex-1 flex flex-col m-2 bg-white shadow-lg rounded-lg">
+  <div className="px-2 pt-2 text-center">
+    <span className={`text-sm font-medium ${tailwindTextColors[userIndex % tailwindBgColors.length]} ${tailwindLightBgColors[userIndex % tailwindBgColors.length]} py-1 px-3 rounded-full`}>
+      {topic}
+    </span>
+  </div>
+  <h2 className="text-lg font-semibold text-center py-2 mt-1 border-b">{title}</h2>
+  <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
+    {messages && messages.length > 0 && messages.map((msg, index) => (
+      <div key={index} className={`max-w-xs ${getMessageBgColor(msg.from)} self-start rounded-lg p-2 shadow ${msg.from === title ? 'self-end' : ''}`}>
+        <p className={`${msg.from === title ? 'text-white' : 'text-gray-800'}`}> {/* Improved text readability */}
+          {msg.text}
+        </p>
+      </div>
+    ))}
+  </div>
+  <div className="p-2">
+    <input
+      type="text"
+      value={message}
+      onChange={(e) => setMessage(e.target.value)}
+      onKeyPress={handleKeyPress}
+      placeholder="Type a message..."
+      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
+      disabled={isLoading}
+    />
+    <button
+      onClick={() => sendMessage(message)}
+      className={`${tailwindBgColors[userIndex % tailwindBgColors.length]} mt-2 w-full text-white font-bold py-2 rounded hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed`}
+      disabled={isLoading}
+    >
+      {isLoading ? 'Sending...' : 'Send'}
+    </button>
+  </div>
+  {isLoaded && locations.length > 0 && (
+    <div className="map-container">
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        zoom={8}
+        center={locations[0]} // Dynamically calculate the center based on all locations
+      >
+        {locations.map((location, index) => (
+          <Marker key={index} position={location} />
         ))}
-      </div>
-      <div className="p-2">
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type a message..."
-          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
-          disabled={isLoading}
-        />
-        <button
-          onClick={() => sendMessage(message)}
-          className={`${buttonColor} mt-2 w-full text-white font-bold py-2 rounded hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed`}
-          disabled={isLoading}
-        >
-          {isLoading ? 'Sending...' : 'Send'}
-        </button>
-      </div>
+      </GoogleMap>
     </div>
+  )}
+</div>
   );
 }
 

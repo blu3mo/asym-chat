@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import ChatPane from './components/ChatPane';
+import { useRouter } from 'next/router'; // Step 1: Import useRouter
 import LanguageSelectionPopup from './components/LanguageSelectionPopup';
 
 // Updated translateMessage function
@@ -39,80 +40,83 @@ const translateMessage = async (conversionLog, newChatMessage, originalLang, new
 
 export default function Home() {
   const [isLanguageSelectionPopupOpen, setIsLanguageSelectionPopupOpen] = useState(true);
-  const [userAMessages, setUserAMessages] = useState([]);
-  const [userBMessages, setUserBMessages] = useState([]);
-  const [userAMessage, setUserAMessage] = useState('');
-  const [userBMessage, setUserBMessage] = useState('');
-  const [userALanguage, setUserALanguage] = useState('コーヒー');
-  const [userBLanguage, setUserBLanguage] = useState('建築');
-  const [isUserALoading, setIsUserALoading] = useState(false);
-  const [isUserBLoading, setIsUserBLoading] = useState(false);
+  const [users, setUsers] = useState(Array.from({ length: 2 }, () => ({ messages: [], message: '', language: '' })));
+  const [isLoading, setIsLoading] = useState(Array.from({ length: 2 }, () => false));
+  const router = useRouter();
 
   useEffect(() => {
-    // Optionally, you can trigger the popup based on a condition,
-    // e.g., only if the languages are not already set in localStorage or similar.
-  }, []);
+    const query = router.query;
+    let updated = false;
+    let index = 1;
+    let newUsers = [];
+    let newLoading = [];
+  
+    while (query[`topic${index}`]) {
+      const language = query[`topic${index}`];
+      if (language) {
+        updated = true;
+        newUsers.push({ messages: [], message: '', language });
+        newLoading.push(false);
+      }
+      index++;
+    }
+  
+    if (updated) {
+      setUsers(newUsers);
+      setIsLoading(newLoading);
+      setIsLanguageSelectionPopupOpen(false);
+    }
+  }, [router.query]);
 
-  const handleSaveLanguageSettings = (aLang, bLang) => {
-    setUserALanguage(aLang);
-    setUserBLanguage(bLang);
+  const handleSaveLanguageSettings = (languages) => {
+    const newUsers = users.map((user, index) => ({
+      ...user,
+      language: languages[index] || user.language,
+    }));
+    setUsers(newUsers);
     setIsLanguageSelectionPopupOpen(false);
   };
 
-  const sendMessage = async (user, message) => {
+  const sendMessage = async (userIndex, message) => {
     if (message.trim() === '') return;
-
-    if (user === 'User A') {
-      setIsUserALoading(true); // Start loading
-    } else {
-      setIsUserBLoading(true); // Start loading
-    }
+    let newUserState = [...users];
+    const newIsLoading = [...isLoading];
+    newIsLoading[userIndex] = true; // Start loading
+    setIsLoading(newIsLoading);
   
-    // Determine the source and target languages based on the user
-    const originalLang = user === 'User A' ? userALanguage : userBLanguage;
-    const newLang = user === 'User A' ? userBLanguage : userALanguage;
+    // Iterate over all users to prepare and send the translated message
+    const promises = newUserState.map(async (user, index) => {
+      if (index !== userIndex) { // Skip the sender
+        const originalLang = newUserState[userIndex].language;
+        const targetLang = user.language;
   
-    // Call translateMessage only if languages are different
-    let translatedMessage = message;
-    if (originalLang !== newLang) {
-      // Take the last 3 messages and create a *dictionary* of original to translated messages
-      const conversionLog = {}
-      for (let i = 0; i < userAMessages.length; i++) {
-        if (user === 'User A') {
-          conversionLog[userAMessages[i].text] = userBMessages[i].text;
-        } else {
-          conversionLog[userBMessages[i].text] = userAMessages[i].text;
+        let translatedMessage = message;
+        if (originalLang !== targetLang) {
+          const conversionLog = {}; // Assume conversionLog logic is adapted for more users
+          translatedMessage = await translateMessage(conversionLog, message, originalLang, targetLang);
         }
+        return { index, translatedMessage };
       }
-
-      translatedMessage = await translateMessage(conversionLog, message, originalLang, newLang);
-    }
+      return null;
+    });
   
-    // Construct new message object for User A and User B
-    if (user === 'User A') {
-      const newMessageA = { text: `${user}: ${message}`, from: user };
-      const newMessageB = { text: `${user}: ${translatedMessage}`, from: user };
-      setUserAMessages([...userAMessages, newMessageA]);
-      setUserBMessages([...userBMessages, newMessageB]);
-    } else {
-      const newMessageA = { text: `${user}: ${translatedMessage}`, from: user };
-      const newMessageB = { text: `${user}: ${message}`, from: user };
-      setUserAMessages([...userAMessages, newMessageA]);
-      setUserBMessages([...userBMessages, newMessageB]);
-    }
+    // Wait for all translations to complete
+    const results = await Promise.all(promises);
   
-    // Clear the input field
-    if (user === 'User A') {
-      setUserAMessage('');
-    } else {
-      setUserBMessage('');
-    }
-
-    if (user === 'User A') {
-      setIsUserALoading(false); // End loading
-    } else {
-      setIsUserBLoading(false); // End loading
-    }
+    // Update messages for all users
+    results.forEach(result => {
+      if (result) {
+        newUserState[result.index].messages.push({ text: `User ${userIndex + 1}: ${result.translatedMessage}`, from: `User ${userIndex + 1}` });
+      }
+    });
+  
+    // Append the original message to the sender's messages
+    newUserState[userIndex].messages.push({ text: `User ${userIndex + 1}: ${message}`, from: `User ${userIndex + 1}` });
+    newUserState[userIndex].message = ''; // Clear the sender's message input
+  
+    setUsers(newUserState);
+    newIsLoading[userIndex] = false; // End loading
+    setIsLoading(newIsLoading);
   };
   
 
@@ -124,43 +128,28 @@ export default function Home() {
       {isLanguageSelectionPopupOpen && (
         <LanguageSelectionPopup
           onSave={handleSaveLanguageSettings}
-          initialUserALanguage={userALanguage}
-          initialUserBLanguage={userBLanguage}
+          initialLanguages={users.map(user => user.language)}
         />
       )}
 
-      <header className="p-4 bg-gray-200 flex justify-between items-center">
-        <div className="flex items-center">
-          <label htmlFor="userALanguage" className="mr-2 font-bold">User A Topic:</label>
-          <span className="px-2 py-1 bg-green-300 rounded text-green-900">{userALanguage}</span>
-        </div>
-        <div className="flex items-center">
-          <label htmlFor="userBLanguage" className="mr-2 font-bold">User B Topic:</label>
-          <span className="px-2 py-1 bg-blue-200 rounded text-blue-900">{userBLanguage}</span>
-        </div>
-      </header>
-
-      <div className="flex flex-1">
-        <ChatPane
-          title="User A"
-          messages={userAMessages}
-          message={userAMessage}
-          setMessage={setUserAMessage}
-          sendMessage={() => sendMessage('User A', userAMessage)}
-          buttonColor="bg-green-500 hover:bg-green-700"
-          isLoading={isUserALoading} // Add this line
-        />
-        <div className="w-0.5 bg-gray-300"></div>
-        <ChatPane
-          title="User B"
-          messages={userBMessages}
-          message={userBMessage}
-          setMessage={setUserBMessage}
-          sendMessage={() => sendMessage('User B', userBMessage)}
-          buttonColor="bg-blue-500 hover:bg-blue-700"
-          isLoading={isUserBLoading} // Add this line
-        />
-        
+      <div className="flex flex-1 overflow-x-auto">
+        {users.map((user, index) => (
+          <ChatPane
+            key={index}
+            title={`User ${index + 1}`}
+            topic={user.language}
+            messages={user.messages}
+            message={user.message}
+            setMessage={(message) => {
+              const newUsers = [...users];
+              newUsers[index].message = message;
+              setUsers(newUsers);
+            }}
+            sendMessage={() => sendMessage(index, user.message)}
+            userIndex={index}
+            isLoading={isLoading[index]}
+          />
+        ))}
       </div>
     </div>
   );
