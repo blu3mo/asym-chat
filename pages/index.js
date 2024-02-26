@@ -69,10 +69,8 @@ export default function Home() {
   }, [router.query]);
 
   const handleSaveLanguageSettings = (languages) => {
-    const newUsers = users.map((user, index) => ({
-      ...user,
-      language: languages[index] || user.language,
-    }));
+    console.log('languages:', languages);
+    const newUsers = languages.map(language => ({ messages: [], message: '', language }));
     setUsers(newUsers);
     setIsLanguageSelectionPopupOpen(false);
   };
