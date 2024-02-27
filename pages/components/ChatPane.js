@@ -63,7 +63,7 @@ function ChatPane({
       const validCoords = coords.filter(coord => coord !== null);
       setLocations(validCoords);
     });
-  }, [messages.length]);
+  }, [messages?.length]);
 
   const mapContainerStyle = {
     height: "400px",
