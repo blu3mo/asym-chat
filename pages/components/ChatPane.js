@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
 
 // Function to extract location names from messages
@@ -58,9 +58,12 @@ function ChatPane({
 
   useEffect(() => {
     const locationNames = extractLocations(messages);
-    const locationPromises = locationNames.map(name => getCoordinatesForLocation(name));
-    Promise.all(locationPromises).then(setLocations);
-  }, [messages]);
+    const locationPromises = locationNames.map(async name => await getCoordinatesForLocation(name));
+    Promise.all(locationPromises).then(coords => {
+      const validCoords = coords.filter(coord => coord !== null);
+      setLocations(validCoords);
+    });
+  }, [messages.length]);
 
   const mapContainerStyle = {
     height: "400px",
@@ -80,54 +83,55 @@ function ChatPane({
   };
 
   return (
-      <div className="flex-1 flex flex-col m-2 bg-white shadow-lg rounded-lg">
-  <div className="px-2 pt-2 text-center">
-    <span className={`text-sm font-medium ${tailwindTextColors[userIndex % tailwindBgColors.length]} ${tailwindLightBgColors[userIndex % tailwindBgColors.length]} py-1 px-3 rounded-full`}>
-      {topic}
-    </span>
-  </div>
-  <h2 className="text-lg font-semibold text-center py-2 mt-1 border-b">{title}</h2>
-  <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
-    {messages && messages.length > 0 && messages.map((msg, index) => (
-      <div key={index} className={`max-w-xs ${getMessageBgColor(msg.from)} self-start rounded-lg p-2 shadow ${msg.from === title ? 'self-end' : ''}`}>
-        <p className={`${msg.from === title ? 'text-white' : 'text-gray-800'}`}> {/* Improved text readability */}
-          {msg.text}
-        </p>
+    <div className="flex-1 flex flex-col m-2 bg-white shadow-lg rounded-lg">
+      <div className="px-2 pt-2 text-center">
+        <span className={`text-sm font-medium ${tailwindTextColors[userIndex % tailwindBgColors.length]} ${tailwindLightBgColors[userIndex % tailwindBgColors.length]} py-1 px-3 rounded-full`}>
+          {topic}
+        </span>
       </div>
-    ))}
-  </div>
-  <div className="p-2">
-    <input
-      type="text"
-      value={message}
-      onChange={(e) => setMessage(e.target.value)}
-      onKeyPress={handleKeyPress}
-      placeholder="Type a message..."
-      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
-      disabled={isLoading}
-    />
-    <button
-      onClick={() => sendMessage(message)}
-      className={`${tailwindBgColors[userIndex % tailwindBgColors.length]} mt-2 w-full text-white font-bold py-2 rounded hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed`}
-      disabled={isLoading}
-    >
-      {isLoading ? 'Sending...' : 'Send'}
-    </button>
-  </div>
-  {isLoaded && locations.length > 0 && (
-    <div className="map-container">
-      <GoogleMap
-        mapContainerStyle={mapContainerStyle}
-        zoom={8}
-        center={locations[0]} // Dynamically calculate the center based on all locations
-      >
-        {locations.map((location, index) => (
-          <Marker key={index} position={location} />
+      <h2 className="text-lg font-semibold text-center py-2 mt-1 border-b">{title}</h2>
+      <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
+        {messages && messages.length > 0 && messages.map((msg, index) => (
+          <div key={index} className={`max-w-xs ${getMessageBgColor(msg.from)} self-start rounded-lg p-2 shadow ${msg.from === title ? 'self-end' : ''}`}>
+            <p className={`${msg.from === title ? 'text-white' : 'text-gray-800'}`}> {/* Improved text readability */}
+              {msg.text}
+            </p>
+          </div>
         ))}
-      </GoogleMap>
+      </div>
+      <div className="p-2">
+        <input
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Type a message..."
+          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
+          disabled={isLoading}
+        />
+        <button
+          onClick={() => sendMessage(message)}
+          className={`${tailwindBgColors[userIndex % tailwindBgColors.length]} mt-2 w-full text-white font-bold py-2 rounded hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed`}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Sending...' : 'Send'}
+        </button>
+      </div>
+
+      {isLoaded && locations.length > 0 && (
+        <div className="map-container">
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            zoom={8}
+            center={locations[0]} // Dynamically calculate the center based on all locations
+          >
+            {locations.map((location, index) => (
+              <Marker key={index} position={location} />
+            ))}
+          </GoogleMap>
+        </div>
+      )}
     </div>
-  )}
-</div>
   );
 }
 
