@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
+import mermaid from 'mermaid';
 
 // Function to extract location names from messages
 const extractLocations = (messages) => {
@@ -12,6 +13,21 @@ const extractLocations = (messages) => {
     }
   });
   return locations;
+};
+
+// Function to extract Mermaid diagrams from messages
+const extractMermaidDiagrams = (messages) => {
+  const mermaidRegex = /```mermaid([\s\S]*?)```/g;
+  let match;
+  const diagrams = [];
+  messages.forEach(msg => {
+    while ((match = mermaidRegex.exec(msg.text)) !== null) {
+      diagrams.push(match[1]);
+    }
+  });
+  // return ["graph TD;\
+  // A-->B;"]
+  return diagrams;
 };
 
 // This is a client-side implementation. For production, consider moving API calls to the server side.
@@ -52,9 +68,13 @@ function ChatPane({
   isLoading,
 }) {
   const [locations, setLocations] = useState([]);
+  const [mermaidDiagrams, setMermaidDiagrams] = useState([]);
+  const mermaidRef = useRef(null);
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: "AIzaSyCfBpSNlz8Mc94IVratPDYbNLHJVNbgBLM", // Replace with your Google Maps API key
   });
+
+  const mermaidId = `mermaid-${Math.floor(Math.random() * 10000)}`;
 
   useEffect(() => {
     const locationNames = extractLocations(messages);
@@ -63,7 +83,30 @@ function ChatPane({
       const validCoords = coords.filter(coord => coord !== null);
       setLocations(validCoords);
     });
+
+    const diagrams = extractMermaidDiagrams(messages);
+    setMermaidDiagrams(diagrams);
   }, [messages?.length]);
+
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+    });
+
+    if (mermaidRef.current) {
+      console.log("mermaid! 2")
+       console.log(mermaidDiagrams[mermaidDiagrams.length - 1])
+        mermaid.render(mermaidId, mermaidDiagrams[mermaidDiagrams.length - 1])
+          .then((svgCode) => {
+            console.log(svgCode);
+            mermaidRef.current.innerHTML = svgCode.svg;
+          })
+          .catch((error) => {
+            console.error("Error during mermaid rendering:", error);
+          });
+    }
+  }, [mermaidDiagrams]);
 
   const mapContainerStyle = {
     height: "400px",
@@ -93,22 +136,22 @@ function ChatPane({
       <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
         {messages && messages.length > 0 && messages.map((msg, index) => (
           <div key={index} className={`max-w-xs ${getMessageBgColor(msg.from)} self-start rounded-lg p-2 shadow ${msg.from === title ? 'self-end' : ''}`}>
-            <p className={`${msg.from === title ? 'text-white' : 'text-gray-800'}`}> {/* Improved text readability */}
+            <pre className={`${msg.from === title ? 'text-white' : 'text-gray-800'} whitespace-pre-wrap`}>
               {msg.text}
-            </p>
+            </pre>
           </div>
         ))}
       </div>
       <div className="p-2">
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type a message..."
-          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
-          disabled={isLoading}
-        />
+      <textarea
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        onKeyPress={handleKeyPress}
+        placeholder="Type a message..."
+        className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
+        disabled={isLoading}
+        rows={3}
+      />
         <button
           onClick={() => sendMessage(message)}
           className={`${tailwindBgColors[userIndex % tailwindBgColors.length]} mt-2 w-full text-white font-bold py-2 rounded hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -131,6 +174,12 @@ function ChatPane({
           </GoogleMap>
         </div>
       )}
+
+      <div key={mermaidDiagrams.length - 1} className="mermaid-container">
+        {mermaidDiagrams.length > 0 && (
+          <div ref={mermaidRef} className="mermaid" id={mermaidId} />
+        )}
+      </div>
     </div>
   );
 }
