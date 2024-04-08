@@ -1,96 +1,135 @@
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import ChatPane from './components/ChatPane';
-import { useRouter } from 'next/router'; // Step 1: Import useRouter
+import { useRouter } from 'next/router';
 import LanguageSelectionPopup from './components/LanguageSelectionPopup';
+import { translateMessage } from './utils/translateMessage';
+import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
-// Updated translateMessage function
-const translateMessage = async (conversionLog, newChatMessage, originalLang, newLang) => {
-  try {
-    console.log(JSON.stringify({
-      conversionLog,
-      newChatMessage,
-      originalLang,
-      newLang,
-    }))
-    const response = await fetch('/api/translate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        conversionLog,
-        newChatMessage,
-        originalLang,
-        newLang,
-      }),
-    });
 
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
+require('dotenv').config();
 
-    const data = await response.json();
-    return data.translatedChat;
-  } catch (error) {
-    console.error('Error translating message:', error);
-    return newChatMessage; // Fallback to the original message in case of an error
-  }
-};
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_API_KEY
+);
 
 export default function Home() {
-  const [isLanguageSelectionPopupOpen, setIsLanguageSelectionPopupOpen] = useState(true);
-  const [users, setUsers] = useState(Array.from({ length: 2 }, () => ({ messages: [], message: '', language: '' })));
-  const [isLoading, setIsLoading] = useState(Array.from({ length: 2 }, () => false));
+  const [isLanguageSelectionPopupOpen, setIsLanguageSelectionPopupOpen] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [isLoading, setIsLoading] = useState([]);
+  const [messageInputs, setMessageInputs] = useState([]);
+  const [roomId, setRoomId] = useState('');
+  const [userName, setUserName] = useState('');
   const router = useRouter();
 
-  useEffect(() => {
-    const query = router.query;
-    let updated = false;
-    let index = 1;
-    let newUsers = [];
-    let newLoading = [];
-  
-    while (query[`topic${index}`]) {
-      const language = query[`topic${index}`];
-      if (language) {
-        updated = true;
-        newUsers.push({ messages: [], message: '', language });
-        newLoading.push(false);
+  const fetchInitialConversations = async () => {
+    if (roomId) {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('conversation_index, message, from_user')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching initial conversations:', error);
+      } else {
+        const initialConversations = data.reduce((acc, message) => {
+          if (!acc[message.conversation_index]) {
+            acc[message.conversation_index] = {
+              messages: [],
+              language: '', // You can set the appropriate language here if available in the database
+            };
+          }
+          acc[message.conversation_index].messages.push({
+            text: `${message.from_user}: ${message.message}`,
+            from: message.from_user,
+          });
+          return acc;
+        }, []);
+
+        setConversations(initialConversations);
+        console.log('setconv 1', initialConversations);
+        setIsLoading(new Array(initialConversations.length).fill(false));
+        setMessageInputs(new Array(initialConversations.length).fill(''));
       }
-      index++;
     }
-  
-    if (updated) {
-      setUsers(newUsers);
-      setIsLoading(newLoading);
-      setIsLanguageSelectionPopupOpen(false);
+  };
+
+  useEffect(() => {
+    console.log('router.query:', router.query);
+
+    const { roomId: queryRoomId, userName: queryUserName } = router.query;
+
+    if (queryRoomId) {
+      console.log('Room ID found in URL:', queryRoomId);
+      setRoomId(queryRoomId);
+    } else {
+      console.log('No room ID found in URL');
+      // const generatedRoomId = uuidv4();
+      // //setRoomId(generatedRoomId);
+      // router.push(`/?roomId=${generatedRoomId}&userName=${queryUserName || 'User'}`);
+    }
+
+    if (queryUserName) {
+      setUserName(queryUserName);
+    } else {
+      setUserName('User');
     }
   }, [router.query]);
 
+  useEffect(() => {
+    if (roomId) {
+      fetchInitialConversations();
+      const messagesChannel = supabase
+        .channel('messages')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          (payload) => {
+            console.log('Change received!', payload);
+            const newMessage = payload.new;
+            setConversations((prevConversations) => {
+              const updatedConversations = [...prevConversations];
+              updatedConversations[newMessage.conversation_index].messages.push({
+                text: `${newMessage.from_user}: ${newMessage.message}`,
+                from: newMessage.from_user,
+              });
+              return updatedConversations;
+              console.log('setconv 2', updatedConversations);
+            });
+          }
+        )
+        .subscribe();
+  
+      return () => {
+        supabase.removeChannel(messagesChannel);
+      };
+    }
+  }, [roomId]);
+
   const handleSaveLanguageSettings = (languages) => {
-    console.log('languages:', languages);
-    const newUsers = languages.map(language => ({ messages: [], message: '', language }));
-    setUsers(newUsers);
+    const newConversations = languages.map(language => ({ messages: [], messageInput: '', language }));
+    //setConversations(newConversations);
     setIsLanguageSelectionPopupOpen(false);
   };
 
-  const sendMessage = async (userIndex, message) => {
+  const sendMessage = async (conversationIndex, message) => {
     if (message.trim() === '') return;
-    let newUserState = [...users];
+  
     const newIsLoading = [...isLoading];
-    newIsLoading[userIndex] = true; // Start loading
+    newIsLoading[conversationIndex] = true;
     setIsLoading(newIsLoading);
   
-    // Iterate over all users to prepare and send the translated message
-    const promises = newUserState.map(async (user, index) => {
-      if (index !== userIndex) { // Skip the sender
-        const originalLang = newUserState[userIndex].language;
-        const targetLang = user.language;
+    const promises = conversations.map(async (conversation, index) => {
+      if (index !== conversationIndex) {
+        const originalLang = conversations[conversationIndex].language;
+        const targetLang = conversation.language;
   
         let translatedMessage = message;
         if (originalLang !== targetLang) {
-          const conversionLog = {}; // Assume conversionLog logic is adapted for more users
+          const conversionLog = {};
           translatedMessage = await translateMessage(conversionLog, message, originalLang, targetLang);
         }
         return { index, translatedMessage };
@@ -98,25 +137,52 @@ export default function Home() {
       return null;
     });
   
-    // Wait for all translations to complete
     const results = await Promise.all(promises);
   
-    // Update messages for all users
     results.forEach(result => {
       if (result) {
-        newUserState[result.index].messages.push({ text: `User ${userIndex + 1}: ${result.translatedMessage}`, from: `User ${userIndex + 1}` });
+        const { index, translatedMessage } = result;
+        supabase
+          .from('messages')
+          .insert({
+            room_id: roomId,
+            conversation_index: index,
+            message: translatedMessage,
+            from_user: userName,
+          })
+          .then(({ error }) => {
+            if (error) {
+              console.error('Error inserting message:', error);
+            } else {
+              console.log('Message inserted successfully');
+              setIsLoading(newIsLoading => {
+                newIsLoading[conversationIndex] = false;
+                return newIsLoading;
+              });
+            }
+          });
       }
     });
   
-    // Append the original message to the sender's messages
-    newUserState[userIndex].messages.push({ text: `User ${userIndex + 1}: ${message}`, from: `User ${userIndex + 1}` });
-    newUserState[userIndex].message = ''; // Clear the sender's message input
-  
-    setUsers(newUserState);
-    newIsLoading[userIndex] = false; // End loading
-    setIsLoading(newIsLoading);
+    supabase
+      .from('messages')
+      .insert({
+        room_id: roomId,
+        conversation_index: conversationIndex,
+        message: message,
+        from_user: userName,
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error inserting message:', error);
+          newIsLoading[conversationIndex] = false;
+          setIsLoading(newIsLoading);
+        } else {
+          newIsLoading[conversationIndex] = false;
+          setIsLoading(newIsLoading);
+        }
+      });
   };
-  
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
@@ -126,28 +192,35 @@ export default function Home() {
       {isLanguageSelectionPopupOpen && (
         <LanguageSelectionPopup
           onSave={handleSaveLanguageSettings}
-          initialLanguages={users.map(user => user.language)}
+          initialLanguages={conversations.map(conv => conv.language)}
         />
       )}
 
       <div className="flex flex-1 overflow-x-auto">
-        {users.map((user, index) => (
+        {conversations.map((conv, index) => (
           <ChatPane
             key={index}
             title={`User ${index + 1}`}
-            topic={user.language}
-            messages={user.messages}
-            message={user.message}
+            topic={conv.language}
+            messages={conv.messages}
+            messageInput={conv.messageInput}
             setMessage={(message) => {
-              const newUsers = [...users];
-              newUsers[index].message = message;
-              setUsers(newUsers);
-            }}
-            sendMessage={() => sendMessage(index, user.message)}
-            userIndex={index}
+              setMessageInputs((prevInputs) => {
+                const newInputs = [...prevInputs];
+                newInputs[index] = message;
+                return newInputs;
+              }
+            )}}
+            sendMessage={() => sendMessage(index, messageInputs[index])}
+            conversationIndex={index}
+            selfUsername={userName}
             isLoading={isLoading[index]}
           />
         ))}
+      </div>
+
+      <div className="text-sm text-gray-500 p-2">
+        Room ID: {roomId} | Username: {userName}
       </div>
     </div>
   );
