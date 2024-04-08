@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import ChatPane from './components/ChatPane';
 import { useRouter } from 'next/router';
 import LanguageSelectionPopup from './components/LanguageSelectionPopup';
-import { translateMessage } from './utils/translateMessage';
+import { translateMessage } from '../utils/translateMessage';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import AdminDashboard from './AdminDashboard';
 
 
 require('dotenv').config();
@@ -227,44 +228,45 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      <div className="text-sm text-gray-500 p-2 pb-0 pl-3">
-        Room ID: {roomId} | Username: {userName}
-      </div>
       <Head>
         <title>Chat App</title>
       </Head>
-      {isLanguageSelectionPopupOpen && (
-        <LanguageSelectionPopup
-          onSave={handleSaveLanguageSettings}
-          initialLanguages={conversations.map(conv => conv.language)}
-        />
+      {roomId ? (
+        <>
+          <div className="text-sm text-gray-500 p-2 pb-0 pl-3">
+            Room ID: {roomId} | Username: {userName}
+          </div>
+          <div className="flex-1 overflow-auto">
+            <div className="flex h-full">
+              {conversations.map((conv, index) => (
+                <ChatPane
+                  key={index}
+                  title={`User ${index + 1}`}
+                  topic={conv.language}
+                  messages={conv.messages}
+                  messageInput={messageInputs[index]}
+                  setMessage={(message) => {
+                    setMessageInputs((prevInputs) => {
+                      const newInputs = [...prevInputs];
+                      newInputs[index] = message;
+                      return newInputs;
+                    });
+                  }}
+                  sendMessage={() => sendMessage(index, messageInputs[index])}
+                  conversationIndex={index}
+                  selfUsername={userName}
+                  isLoading={isLoading[index]}
+                  hideInput={onlySendFrom !== null && onlySendFrom !== index}
+                  hideConversation={onlyShow !== null && onlyShow !== index}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <></>
+        // <AdminDashboard />
       )}
-      <div className="flex-1 overflow-auto">
-        <div className="flex h-full">
-          {conversations.map((conv, index) => (
-            <ChatPane
-              key={index}
-              title={`User ${index + 1}`}
-              topic={conv.language}
-              messages={conv.messages}
-              messageInput={messageInputs[index]}
-              setMessage={(message) => {
-                setMessageInputs((prevInputs) => {
-                  const newInputs = [...prevInputs];
-                  newInputs[index] = message;
-                  return newInputs;
-                });
-              }}
-              sendMessage={() => sendMessage(index, messageInputs[index])}
-              conversationIndex={index}
-              selfUsername={userName}
-              isLoading={isLoading[index]}
-              hideInput={onlySendFrom !== null && onlySendFrom !== index}
-              hideConversation={onlyShow !== null && onlyShow !== index}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+    </div >
   );
 }
