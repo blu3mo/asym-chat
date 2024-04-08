@@ -33,7 +33,7 @@ export default function Home() {
         .from('languages')
         .select('conversation_index, language')
         .eq('room_id', roomId);
-  
+
       if (languagesError) {
         console.error('Error fetching languages:', languagesError);
       } else {
@@ -60,14 +60,14 @@ export default function Home() {
         setIsLoading(new Array(initialConversations.length).fill(false));
         setMessageInputs(new Array(initialConversations.length).fill(''));
       }
-  
+
       // Fetch initial messages for the room
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('conversation_index, message, from_user')
         .eq('room_id', roomId)
         .order('created_at', { ascending: true });
-  
+
       if (messagesError) {
         console.error('Error fetching initial conversations:', messagesError);
       } else {
@@ -81,7 +81,7 @@ export default function Home() {
           });
           return acc;
         }, []);
-  
+
         setConversations((prevConversations) => {
           return prevConversations.map((conv, index) => ({
             ...conv,
@@ -94,22 +94,22 @@ export default function Home() {
 
   useEffect(() => {
     console.log('router.query:', router.query);
-  
+
     const { roomId: queryRoomId, userName: queryUserName, onlySendFrom, onlyShow } = router.query;
-  
+
     if (queryRoomId) {
       console.log('Room ID found in URL:', queryRoomId);
       setRoomId(queryRoomId);
     } else {
       console.log('No room ID found in URL');
     }
-  
+
     if (queryUserName) {
       setUserName(queryUserName);
     } else {
       setUserName('User');
     }
-  
+
     setOnlySendFrom(onlySendFrom ? parseInt(onlySendFrom) : null);
     setOnlyShow(onlyShow ? parseInt(onlyShow) : null);
   }, [router.query]);
@@ -136,7 +136,7 @@ export default function Home() {
           }
         )
         .subscribe();
-  
+
       return () => {
         supabase.removeChannel(messagesChannel);
       };
@@ -151,16 +151,16 @@ export default function Home() {
 
   const sendMessage = async (conversationIndex, message) => {
     if (message.trim() === '') return;
-  
+
     const newIsLoading = [...isLoading];
     newIsLoading[conversationIndex] = true;
     setIsLoading(newIsLoading);
-  
+
     const promises = conversations.map(async (conversation, index) => {
       if (index !== conversationIndex) {
         const originalLang = conversations[conversationIndex].language;
         const targetLang = conversation.language;
-  
+
         let translatedMessage = message;
         if (originalLang !== targetLang) {
           const conversionLog = {};
@@ -170,9 +170,9 @@ export default function Home() {
       }
       return null;
     });
-  
+
     const results = await Promise.all(promises);
-  
+
     results.forEach(result => {
       if (result) {
         const { index, translatedMessage } = result;
@@ -204,7 +204,7 @@ export default function Home() {
           });
       }
     });
-  
+
     supabase
       .from('messages')
       .insert({
@@ -226,8 +226,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
-
+    <div className="flex flex-col h-screen bg-gray-100">
       <div className="text-sm text-gray-500 p-2 pb-0 pl-3">
         Room ID: {roomId} | Username: {userName}
       </div>
@@ -240,30 +239,31 @@ export default function Home() {
           initialLanguages={conversations.map(conv => conv.language)}
         />
       )}
-
-      <div className="flex flex-1 overflow-x-auto">
-        {conversations.map((conv, index) => (
-          <ChatPane
-            key={index}
-            title={`User ${index + 1}`}
-            topic={conv.language}
-            messages={conv.messages}
-            messageInput={messageInputs[index]}
-            setMessage={(message) => {
-              setMessageInputs((prevInputs) => {
-                const newInputs = [...prevInputs];
-                newInputs[index] = message;
-                return newInputs;
-              }
-            )}}
-            sendMessage={() => sendMessage(index, messageInputs[index])}
-            conversationIndex={index}
-            selfUsername={userName}
-            isLoading={isLoading[index]}
-            hideInput={onlySendFrom !== null && onlySendFrom !== index}
-            hideConversation={onlyShow !== null && onlyShow !== index}
-          />
-        ))}
+      <div className="flex-1 overflow-auto">
+        <div className="flex h-full">
+          {conversations.map((conv, index) => (
+            <ChatPane
+              key={index}
+              title={`User ${index + 1}`}
+              topic={conv.language}
+              messages={conv.messages}
+              messageInput={messageInputs[index]}
+              setMessage={(message) => {
+                setMessageInputs((prevInputs) => {
+                  const newInputs = [...prevInputs];
+                  newInputs[index] = message;
+                  return newInputs;
+                });
+              }}
+              sendMessage={() => sendMessage(index, messageInputs[index])}
+              conversationIndex={index}
+              selfUsername={userName}
+              isLoading={isLoading[index]}
+              hideInput={onlySendFrom !== null && onlySendFrom !== index}
+              hideConversation={onlyShow !== null && onlyShow !== index}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
