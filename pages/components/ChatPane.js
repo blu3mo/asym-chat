@@ -67,6 +67,8 @@ function ChatPane({
   conversationIndex,
   selfUsername,
   isLoading,
+  hideInput,
+  hideConversation
 }) {
   const [locations, setLocations] = useState([]);
   const [mermaidDiagrams, setMermaidDiagrams] = useState([]);
@@ -76,6 +78,10 @@ function ChatPane({
   });
 
   const mermaidId = `mermaid-${Math.floor(Math.random() * 10000)}`;
+
+  useEffect(() => {
+    console.log("messageInput", messageInput)
+  }, [messageInput]);
 
   useEffect(() => {
     const locationNames = extractLocations(messages);
@@ -126,14 +132,18 @@ function ChatPane({
     return msgFrom == selfUsername ? tailwindBgColors[conversationIndex % tailwindBgColors.length] : 'bg-gray-100'; // Lighter gray for non-own messages
   };
 
+  if (hideConversation) {
+    return null;
+  }
+  
   return (
     <div className="flex-1 flex flex-col m-2 bg-white shadow-lg rounded-lg">
-      <div className="px-2 pt-2 text-center">
-        <span className={`text-sm font-medium ${tailwindTextColors[conversationIndex % tailwindBgColors.length]} ${tailwindLightBgColors[conversationIndex % tailwindBgColors.length]} py-1 px-3 rounded-full`}>
+      <div className="px-2 py-3 text-center border-b">
+        <span className={`text-lg font-medium ${tailwindTextColors[conversationIndex % tailwindBgColors.length]} ${tailwindLightBgColors[conversationIndex % tailwindBgColors.length]} py-1 px-3 rounded-full`}>
           {topic}
         </span>
       </div>
-      <h2 className="text-lg font-semibold text-center py-2 mt-1 border-b">{title}</h2>
+      {/* <h2 className="text-lg font-semibold text-center py-2 mt-1 border-b">{title}</h2> */}
       <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
         {messages && messages.length > 0 && messages.map((msg, index) => (
           <div key={index} className={`max-w-xs ${getMessageBgColor(msg.from)} self-start rounded-lg p-2 shadow ${msg.from == selfUsername ? 'self-end' : ''}`}>
@@ -143,24 +153,26 @@ function ChatPane({
           </div>
         ))}
       </div>
-      <div className="p-2">
-      <textarea
-        value={messageInput}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyPress={handleKeyPress}
-        placeholder="Type a message..."
-        className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
-        disabled={isLoading}
-        rows={3}
-      />
-        <button
-          onClick={() => sendMessage(messageInput)}
-          className={`${tailwindBgColors[conversationIndex % tailwindBgColors.length]} mt-2 w-full text-white font-bold py-2 rounded hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed`}
-          disabled={isLoading}
-        >
-          {isLoading ? 'Sending...' : 'Send'}
-        </button>
-      </div>
+      {!hideInput && (
+          <div className="p-2">
+          <textarea
+            value={messageInput}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type a message..."
+            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
+            disabled={isLoading}
+            rows={3}
+          />
+            <button
+              onClick={() => sendMessage(messageInput)}
+              className={`${tailwindBgColors[conversationIndex % tailwindBgColors.length]} mt-2 w-full text-white font-bold py-2 rounded hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Sending...' : 'Send'}
+            </button>
+          </div>
+      )}
 
       {isLoaded && locations.length > 0 && (
         <div className="map-container">

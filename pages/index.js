@@ -22,61 +22,96 @@ export default function Home() {
   const [messageInputs, setMessageInputs] = useState([]);
   const [roomId, setRoomId] = useState('');
   const [userName, setUserName] = useState('');
+  const [onlySendFrom, setOnlySendFrom] = useState(null);
+  const [onlyShow, setOnlyShow] = useState(null);
   const router = useRouter();
+
 
   const fetchInitialConversations = async () => {
     if (roomId) {
-      const { data, error } = await supabase
+      let { data: languagesData, error: languagesError } = await supabase
+        .from('languages')
+        .select('conversation_index, language')
+        .eq('room_id', roomId);
+  
+      if (languagesError) {
+        console.error('Error fetching languages:', languagesError);
+      } else {
+        if (languagesData.length === 0) {
+          const { error } = await supabase.from('languages').insert(
+            ["Coffee", "Architecture"].map((language, index) => ({
+              room_id: roomId,
+              conversation_index: index,
+              language
+            }))
+          );
+          languagesData = ["Coffee", "Architecture"].map((language, index) => ({
+            conversation_index: index,
+            language
+          }));
+        }
+
+        const initialConversations = languagesData.map((languageData) => ({
+          messages: [],
+          language: languageData.language,
+        }));
+
+        setConversations(initialConversations);
+        setIsLoading(new Array(initialConversations.length).fill(false));
+        setMessageInputs(new Array(initialConversations.length).fill(''));
+      }
+  
+      // Fetch initial messages for the room
+      const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('conversation_index, message, from_user')
         .eq('room_id', roomId)
         .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching initial conversations:', error);
+  
+      if (messagesError) {
+        console.error('Error fetching initial conversations:', messagesError);
       } else {
-        const initialConversations = data.reduce((acc, message) => {
+        const initialMessages = messagesData.reduce((acc, message) => {
           if (!acc[message.conversation_index]) {
-            acc[message.conversation_index] = {
-              messages: [],
-              language: '', // You can set the appropriate language here if available in the database
-            };
+            acc[message.conversation_index] = [];
           }
-          acc[message.conversation_index].messages.push({
+          acc[message.conversation_index].push({
             text: `${message.from_user}: ${message.message}`,
             from: message.from_user,
           });
           return acc;
         }, []);
-
-        setConversations(initialConversations);
-        console.log('setconv 1', initialConversations);
-        setIsLoading(new Array(initialConversations.length).fill(false));
-        setMessageInputs(new Array(initialConversations.length).fill(''));
+  
+        setConversations((prevConversations) => {
+          return prevConversations.map((conv, index) => ({
+            ...conv,
+            messages: initialMessages[index] || [],
+          }));
+        });
       }
     }
   };
 
   useEffect(() => {
     console.log('router.query:', router.query);
-
-    const { roomId: queryRoomId, userName: queryUserName } = router.query;
-
+  
+    const { roomId: queryRoomId, userName: queryUserName, onlySendFrom, onlyShow } = router.query;
+  
     if (queryRoomId) {
       console.log('Room ID found in URL:', queryRoomId);
       setRoomId(queryRoomId);
     } else {
       console.log('No room ID found in URL');
-      // const generatedRoomId = uuidv4();
-      // //setRoomId(generatedRoomId);
-      // router.push(`/?roomId=${generatedRoomId}&userName=${queryUserName || 'User'}`);
     }
-
+  
     if (queryUserName) {
       setUserName(queryUserName);
     } else {
       setUserName('User');
     }
+  
+    setOnlySendFrom(onlySendFrom ? parseInt(onlySendFrom) : null);
+    setOnlyShow(onlyShow ? parseInt(onlyShow) : null);
   }, [router.query]);
 
   useEffect(() => {
@@ -97,7 +132,6 @@ export default function Home() {
                 from: newMessage.from_user,
               });
               return updatedConversations;
-              console.log('setconv 2', updatedConversations);
             });
           }
         )
@@ -159,6 +193,13 @@ export default function Home() {
                 newIsLoading[conversationIndex] = false;
                 return newIsLoading;
               });
+              console.log('setmsg 1', messageInputs);
+              setMessageInputs(newInputs => {
+                console.log('setmsg 2', newInputs, conversationIndex);
+                newInputs[conversationIndex] = '';
+                return newInputs;
+              }
+              );
             }
           });
       }
@@ -186,6 +227,10 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
+
+      <div className="text-sm text-gray-500 p-2 pb-0 pl-3">
+        Room ID: {roomId} | Username: {userName}
+      </div>
       <Head>
         <title>Chat App</title>
       </Head>
@@ -203,7 +248,7 @@ export default function Home() {
             title={`User ${index + 1}`}
             topic={conv.language}
             messages={conv.messages}
-            messageInput={conv.messageInput}
+            messageInput={messageInputs[index]}
             setMessage={(message) => {
               setMessageInputs((prevInputs) => {
                 const newInputs = [...prevInputs];
@@ -215,12 +260,10 @@ export default function Home() {
             conversationIndex={index}
             selfUsername={userName}
             isLoading={isLoading[index]}
+            hideInput={onlySendFrom !== null && onlySendFrom !== index}
+            hideConversation={onlyShow !== null && onlyShow !== index}
           />
         ))}
-      </div>
-
-      <div className="text-sm text-gray-500 p-2">
-        Room ID: {roomId} | Username: {userName}
       </div>
     </div>
   );
