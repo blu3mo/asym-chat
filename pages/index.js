@@ -47,7 +47,7 @@ export default function Home() {
               language
             }))
           );
-          languagesData = ["Coffee", "Architecture"].map((language, index) => ({
+          languagesData = ["デザインや建築が好きなので、週末は美術館に展示を見に行ったり、図書館で本を読んだりしています。最近はトランジションデザインに特に興味があります。", "SF小説を読んだり、新しいVRソフトウェアのアイデアを考えて実装したりしています。最近はポッドキャストもよく聞いています。世界史についてのポッドキャストが好きです。"].map((language, index) => ({
             conversation_index: index,
             language
           }));
