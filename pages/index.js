@@ -6,9 +6,6 @@ import LanguageSelectionPopup from './components/LanguageSelectionPopup';
 import { translateMessage } from '../utils/translateMessage';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import AdminDashboard from './AdminDashboard';
-
-
 
 require('dotenv').config();
 
@@ -40,17 +37,16 @@ export default function Home() {
         console.error('Error fetching languages:', languagesError);
       } else {
         if (languagesData.length === 0) {
-          const { error } = await supabase.from('languages').insert(
-            ["Coffee", "Architecture"].map((language, index) => ({
-              room_id: roomId,
-              conversation_index: index,
-              language
-            }))
-          );
-          languagesData = ["デザインや建築が好きなので、週末は美術館に展示を見に行ったり、図書館で本を読んだりしています。最近はトランジションデザインに特に興味があります。", "SF小説を読んだり、新しいVRソフトウェアのアイデアを考えて実装したりしています。最近はポッドキャストもよく聞いています。世界史についてのポッドキャストが好きです。"].map((language, index) => ({
+          languagesData = ["Lang1", "Lang2"].map((language, index) => ({
             conversation_index: index,
             language
           }));
+          const { error } = await supabase.from('languages').insert(
+            languagesData.map((languageData) => ({
+              ...languageData,
+              room_id: roomId,
+            }))
+          );
         }
 
         const initialConversations = languagesData.map((languageData) => ({
@@ -230,7 +226,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       <Head>
-        <title>Chat App</title>
+        <title>Asymmetric Chat</title>
       </Head>
       {roomId ? (
         <>
