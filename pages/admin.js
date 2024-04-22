@@ -11,6 +11,7 @@ const supabase = createClient(
 export default function AdminDashboard() {
   const [rooms, setRooms] = useState([]);
   const [newRoomLanguages, setNewRoomLanguages] = useState(['', '']);
+  const [roomId, setRoomId] = useState(uuidv4());
 
   useEffect(() => {
     fetchRooms();
@@ -43,7 +44,6 @@ export default function AdminDashboard() {
   };
 
   const createRoom = async () => {
-    const roomId = uuidv4();
     const languagesData = newRoomLanguages.map((language, index) => ({
       conversation_index: index,
       language,
@@ -55,6 +55,7 @@ export default function AdminDashboard() {
       console.error('Error creating room:', error);
     } else {
       setNewRoomLanguages(['', '']);
+      setRoomId(uuidv4());
       fetchRooms();
     }
   };
@@ -81,6 +82,16 @@ export default function AdminDashboard() {
             id="user2Language"
             value={newRoomLanguages[1]}
             onChange={(e) => setNewRoomLanguages([newRoomLanguages[0], e.target.value])}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="mb-4">
+          <label htmlFor="roomId" className="block mb-1">Room ID:</label>
+          <input
+            type="text"
+            id="roomId"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

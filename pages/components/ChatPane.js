@@ -137,7 +137,7 @@ function ChatPane({
   }
   
   return (
-    <div className="flex-1 flex flex-col m-2 bg-white shadow-lg rounded-lg">
+    <div className="flex-1 flex flex-col m-2 bg-white shadow-lg rounded-lg max-w-[600px]">
       <div className="px-2 py-3 text-center border-b">
         <span className={`text-lg font-medium ${tailwindTextColors[conversationIndex % tailwindBgColors.length]} ${tailwindLightBgColors[conversationIndex % tailwindBgColors.length]} py-1 px-3 rounded-full`}>
           {topic}

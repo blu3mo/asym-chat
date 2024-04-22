@@ -6,6 +6,8 @@ import LanguageSelectionPopup from './components/LanguageSelectionPopup';
 import { translateMessage } from '../utils/translateMessage';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import Script from 'next/script';
+import GazeManager from './GazeManager';
 
 require('dotenv').config();
 
@@ -228,13 +230,14 @@ export default function Home() {
       <Head>
         <title>Asymmetric Chat</title>
       </Head>
+      <GazeManager />
       {roomId ? (
         <>
           <div className="text-sm text-gray-500 p-2 pb-0 pl-3">
             Room ID: {roomId} | Username: {userName}
           </div>
           <div className="flex-1 overflow-auto">
-            <div className="flex h-full">
+            <div className="flex h-full justify-between">
               {conversations.map((conv, index) => (
                 <ChatPane
                   key={index}
