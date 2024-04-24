@@ -32,10 +32,10 @@ async function translateText(conversionLog, newChatMessage, originalLang, newLan
     //   'role': 'system',
     //   'content': `Edit the following message to adjust the audience from ${originalLang} to ${newLang}. The goal is to bridge the communication barrier between people with different knowledges.Keep the core message of the text, while adjusting the non-important part to make it more understandable for the audience. Make the language natural.`
     // },
-    {
-      'role': 'system',
-      'content': `Edit the following idea to adjust the underlying values to ${newLang}. Do not change the topic and the core of the idea, while making slight changes to the phrasing. Make the language natural.`
-    },
+    // {
+    //   'role': 'system',
+    //   'content': `Edit the following idea to adjust the underlying values to ${newLang}. Do not change the topic and the core of the idea, while making slight changes to the phrasing. Make the language natural.`
+    // },
     ...previousLog,
     {
       'role': 'user',
