@@ -230,7 +230,7 @@ export default function Home() {
       <Head>
         <title>Asymmetric Chat</title>
       </Head>
-      <GazeManager />
+      <GazeManager roomId={roomId} userName={userName} />
       {roomId ? (
         <>
           <div className="text-sm text-gray-500 p-2 pb-0 pl-3">
