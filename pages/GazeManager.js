@@ -17,7 +17,6 @@ export default function GazeManager({ roomId, userName }) {
     const loadWebGazer = () => {
         // Load WebGazer
         const webgazer = window.webgazer;
-        console.log(webgazer);
       
         if (!webgazer) {
           return;
@@ -32,12 +31,12 @@ export default function GazeManager({ roomId, userName }) {
           if (data == null) {
             return;
           }
-          console.log(data, elapsedTime);
             
           const currentTime = Date.now();
-          if (currentTime - lastInsertTime >= 300) {
+          if (currentTime - lastInsertTime >= 500) {
             // Calculate average gaze data over the 1-second interval
       
+            lastInsertTime = currentTime;
             const { x, y } = data;
             try {
               const { error } = await supabase.from('gaze').insert({
@@ -53,16 +52,17 @@ export default function GazeManager({ roomId, userName }) {
                 console.error('Error inserting gaze data:', error);
               } else {
                 console.log('Gaze data inserted successfully');
+                console.log('Gaze data:', x, y);
               }
             } catch (error) {
               console.error('Error inserting gaze data:', error);
             }
       
-            lastInsertTime = currentTime;
           }
         }).begin();
       
         webgazer.params.showVideo = false;
+        window.webgazer.params.showGazeDot = false;
         setShowCalibrationGuide(true);
         setIsWebGazerLoaded(true);
       };
@@ -86,6 +86,16 @@ export default function GazeManager({ roomId, userName }) {
           window.removeEventListener('keyup', handleEvent);
         };
       }, []);
+
+
+    
+    useEffect(() => {
+        const webgazer = window.webgazer;
+        if (!webgazer) {
+            return;
+          }
+        window.webgazer.params.showGazeDot = false;
+    }, [showCalibrationGuide]);
 
     return (
         <>

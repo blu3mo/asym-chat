@@ -20,23 +20,24 @@ export default function AdminDashboard() {
   const fetchRooms = async () => {
     const { data, error } = await supabase
       .from('languages')
-      .select('room_id, language')
-      .order('room_id', { ascending: true });
+      .select('room_id, language, created_at')
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching rooms:', error);
     } else {
-      const groupedData = data.reduce((acc, { room_id, language }) => {
+      const groupedData = data.reduce((acc, { room_id, language, created_at }) => {
         if (!acc[room_id]) {
-          acc[room_id] = [];
+          acc[room_id] = { languages: [], created_at };
         }
-        acc[room_id].push(language);
+        acc[room_id].languages.push(language);
         return acc;
       }, {});
 
-      const rooms = Object.entries(groupedData).map(([room_id, languages]) => ({
+      const rooms = Object.entries(groupedData).map(([room_id, { languages, created_at }]) => ({
         id: room_id,
         languages,
+        created_at,
       }));
 
       setRooms(rooms);
@@ -108,6 +109,7 @@ export default function AdminDashboard() {
           {rooms.map((room) => (
             <li key={room.id} className="border border-gray-300 rounded-md p-3">
               <div className="font-semibold mb-2">Room ID: {room.id}</div>
+              <div>Created At: {new Date(room.created_at).toLocaleString()}</div>
               <ul className="space-y-1">
                 {room.languages.map((language, index) => (
                   <li key={index}>
