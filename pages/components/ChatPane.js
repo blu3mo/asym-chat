@@ -95,6 +95,11 @@ function ChatPane({
 
     const diagrams = extractMermaidDiagrams(messages);
     setMermaidDiagrams(diagrams);
+
+    if (messagesEndRef.current) {
+      console.log("scrolling")
+      messagesEndRef.current.scrollIntoView();
+    }
   }, [messages?.length]);
 
   useEffect(() => {
@@ -117,12 +122,6 @@ function ChatPane({
     }
   }, [mermaidDiagrams]);
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      console.log("scrolling")
-      messagesEndRef.current.scrollIntoView();
-    }
-  }, [messages.length]);
 
   const mapContainerStyle = {
     height: "400px",
