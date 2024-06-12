@@ -23,10 +23,16 @@ async function translateText(conversionLog, newChatMessage, originalLang, newLan
     });
   });
   
+  
   const messages = [
     {
       'role': 'system',
-      'content': `You are a topic translator that convert chat of one topic to another topic. Convert the topic of following text from ${originalLang} to ${newLang}. Keep the sentence structure as much as possible, while also maintaining the consistency of the conversation.`
+      'content': `You are a topic translator that convert chat of one topic to another topic. Convert the topic of following text from original user's self-intro topics to new user's self-intro topics.
+       # Original User's Self-intro:
+       ${originalLang}. 
+       # New User's Self-intro:
+      ${newLang}
+       Keep the sentence structure as much as possible, while also maintaining the consistency of the conversation.`
     },
     // {
     //   'role': 'system',
