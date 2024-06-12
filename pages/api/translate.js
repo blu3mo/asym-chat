@@ -11,27 +11,38 @@ async function translateText(conversionLog, newChatMessage, originalLang, newLan
   if (conversionLog === undefined) {
     conversionLog = {};
   }
-  const previousLog = []
-  Object.entries(conversionLog).forEach(([original, converted]) => {
-    previousLog.push({
-      'role': 'user',
-      'content': original
-    })
-    previousLog.push({
-      'role': 'assistant',
-      'content': converted
-    });
-  });
-  
+  var previousLog = [];
+  const originalMessages = conversionLog.find(({ language }) => language === originalLang)?.messages || [];
+  const newMessages = conversionLog.find(({ language }) => language === newLang)?.messages || [];
+  const maxLength = Math.max(originalMessages.length, newMessages.length);
+
+  for (let i = 0; i < maxLength; i++) {
+    if (i < originalMessages.length) {
+      const message = originalMessages[i].text;
+      previousLog.push({
+        'role': 'user',
+        'content': message
+      });
+    }
+    if (i < newMessages.length) {
+      const [user, message] = newMessages[i].text.split(': ');
+      previousLog.push({
+        'role': 'assistant',
+        'content': message
+      });
+    }
+  }
+
+  previousLog = previousLog.slice(-20);
   
   const messages = [
     {
       'role': 'system',
-      'content': `You are a topic translator that convert chat of one topic to another topic. Convert the topic of following text from original user's self-intro topics to new user's self-intro topics.
-       # Original User's Self-intro:
+      'content': `You are a topic translator that convert chat of one topic to another topic. Convert the topic of following text based on the given context (self-intro of sender and receiver)
+       # Sender's Self-intro Context:
        ${originalLang}. 
-       # New User's Self-intro:
-      ${newLang}
+       # Receiver's Self-intro Context:
+       ${newLang}
        Keep the sentence structure as much as possible, while also maintaining the consistency of the conversation.`
     },
     // {
@@ -50,14 +61,13 @@ async function translateText(conversionLog, newChatMessage, originalLang, newLan
   ];
 
   console.log('Messages:', messages )
+  console.log('Previous Log:', previousLog)
 
   const response = await openai.chat.completions.create({
-    'model': 'gpt-4',
+    'model': 'gpt-4o',
     'messages': messages
   });
 
-  console.log(conversionLog);
-  console.log(messages);
 
   const translatedText = response['choices'][0]['message']['content'];
   console.log('Translated text:', translatedText);

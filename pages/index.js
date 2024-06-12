@@ -163,7 +163,8 @@ export default function Home() {
 
         let translatedMessage = message;
         if (originalLang !== targetLang) {
-          const conversionLog = {};
+          const conversionLog = conversations;
+          console.log('conversionLog:', conversionLog);
           translatedMessage = await translateMessage(conversionLog, message, originalLang, targetLang);
         }
         return { index, translatedMessage };
