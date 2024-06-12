@@ -20,23 +20,23 @@ export default function AdminDashboard() {
   const fetchRooms = async () => {
     const { data, error } = await supabase
       .from('languages')
-      .select('room_id, language, created_at')
+      .select('room_id, language, created_at, conversation_index')
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching rooms:', error);
     } else {
-      const groupedData = data.reduce((acc, { room_id, language, created_at }) => {
+      const groupedData = data.reduce((acc, { room_id, language, created_at, conversation_index }) => {
         if (!acc[room_id]) {
           acc[room_id] = { languages: [], created_at };
         }
-        acc[room_id].languages.push(language);
+        acc[room_id].languages.push({ language, conversation_index });
         return acc;
       }, {});
 
       const rooms = Object.entries(groupedData).map(([room_id, { languages, created_at }]) => ({
         id: room_id,
-        languages,
+        languages: languages.sort((a, b) => a.conversation_index - b.conversation_index).map(lang => lang.language),
         created_at,
       }));
 
@@ -116,8 +116,8 @@ export default function AdminDashboard() {
                     <div>User {index + 1} Language: {language}</div>
                     <div>
                       User {index + 1} URL:{' '}
-                      <Link href={`/?roomId=${room.id}&userName=User${index + 1}`}>
-                        <span className="text-blue-500 hover:underline">{`/?roomId=${room.id}&userName=User${index + 1}`}</span>
+                      <Link href={`/?roomId=${room.id}&userName=User${index + 1}&onlySendFrom=${index}`}>
+                        <span className="text-blue-500 hover:underline">{`/?roomId=${room.id}&userName=User${index + 1}&onlySendFrom=${index}`}</span>
                       </Link>
                     </div>
                   </li>

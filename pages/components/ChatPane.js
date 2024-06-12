@@ -73,6 +73,8 @@ function ChatPane({
   const [locations, setLocations] = useState([]);
   const [mermaidDiagrams, setMermaidDiagrams] = useState([]);
   const mermaidRef = useRef(null);
+  const messagesEndRef = useRef(null); // Ref for auto-scrolling
+
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: "AIzaSyCfBpSNlz8Mc94IVratPDYbNLHJVNbgBLM", // Replace with your Google Maps API key
   });
@@ -115,6 +117,13 @@ function ChatPane({
     }
   }, [mermaidDiagrams]);
 
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      console.log("scrolling")
+      messagesEndRef.current.scrollIntoView();
+    }
+  }, [messages.length]);
+
   const mapContainerStyle = {
     height: "400px",
     width: "100%",
@@ -138,11 +147,11 @@ function ChatPane({
   
   return (
     <div className="flex-1 flex flex-col m-2 bg-white shadow-lg rounded-lg max-w-[600px]">
-      <div className="px-2 py-3 text-center border-b">
+      {/* <div className="px-2 py-3 text-center border-b">
         <span className={`text-lg font-medium ${tailwindTextColors[conversationIndex % tailwindBgColors.length]} ${tailwindLightBgColors[conversationIndex % tailwindBgColors.length]} py-1 px-3 rounded-full`}>
           {topic}
         </span>
-      </div>
+      </div> */}
       {/* <h2 className="text-lg font-semibold text-center py-2 mt-1 border-b">{title}</h2> */}
       <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
         {messages && messages.length > 0 && messages.map((msg, index) => (
@@ -152,6 +161,7 @@ function ChatPane({
             </pre>
           </div>
         ))}
+        <div ref={messagesEndRef}/> {/* Invisible element for scrolling */}
       </div>
       {!hideInput && (
           <div className="p-2">

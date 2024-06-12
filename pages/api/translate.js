@@ -7,6 +7,10 @@ const openai = new OpenAI({
 });
 
 async function translateText(conversionLog, newChatMessage, originalLang, newLang) {
+  if (originalLang === newLang) {
+    return newChatMessage;
+  }
+
   console.log(conversionLog);
   if (conversionLog === undefined) {
     conversionLog = {};
@@ -76,10 +80,21 @@ async function translateText(conversionLog, newChatMessage, originalLang, newLan
 
 export default async function handler(req, res) {
   const { conversionLog, newChatMessage, originalLang, newLang } = req.body;
-  console.log(req.body)
+  console.log(req.body);
   console.log('conversionLog:', conversionLog);
+
+  const startTime = Date.now();
+
   try {
     const translatedChat = await translateText(conversionLog, newChatMessage, originalLang, newLang);
+    const elapsedTime = Date.now() - startTime;
+    const remainingTime = 1000 - elapsedTime;
+    console.log('Remaining time:', remainingTime);
+
+    if (remainingTime > 0) {
+      await new Promise(resolve => setTimeout(resolve, remainingTime));
+    }
+
     res.status(200).json({ translatedChat });
   } catch (e) {
     res.status(200).json({ translatedChat: e.message });

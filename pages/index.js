@@ -124,15 +124,20 @@ export default function Home() {
           { event: 'INSERT', schema: 'public', table: 'messages' },
           (payload) => {
             console.log('Change received!', payload);
+            // console.log('Change received!', payload);
             const newMessage = payload.new;
-            setConversations((prevConversations) => {
-              const updatedConversations = [...prevConversations];
-              updatedConversations[newMessage.conversation_index].messages.push({
-                text: `${newMessage.from_user}: ${newMessage.message}`,
-                from: newMessage.from_user,
-              });
-              return updatedConversations;
-            });
+            if (newMessage.room_id === roomId) { // Check if the message belongs to the current room              
+              // なぜか↓だと何度もメッセージが追加される。理由がわからないので一旦別の実装で対処
+              // setConversations((prevConversations) => {
+              //   const updatedConversations = [...prevConversations];
+              //   updatedConversations[newMessage.conversation_index].messages.push({
+              //     text: `${newMessage.from_user}: ${newMessage.message}`,
+              //     from: newMessage.from_user,
+              //   });
+              //   return updatedConversations;
+              // });
+              fetchInitialConversations();
+            }
           }
         )
         .subscribe();
@@ -162,11 +167,9 @@ export default function Home() {
         const targetLang = conversation.language;
 
         let translatedMessage = message;
-        if (originalLang !== targetLang) {
-          const conversionLog = conversations;
+        const conversionLog = conversations;
           console.log('conversionLog:', conversionLog);
           translatedMessage = await translateMessage(conversionLog, message, originalLang, targetLang);
-        }
         return { index, translatedMessage };
       }
       return null;
