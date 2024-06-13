@@ -1,6 +1,6 @@
 "use client";
 
-import { React, useEffect, useState } from 'react';
+import { React, useEffect, useState, useRef } from 'react';
 import Script from 'next/script';
 import { createClient } from '@supabase/supabase-js';
 
@@ -8,6 +8,8 @@ export default function GazeManager({ roomId, userName }) {
 
     const [isWebGazerLoaded, setIsWebGazerLoaded] = useState(false);
     const [showCalibrationGuide, setShowCalibrationGuide] = useState(false);
+    const [saveGaze, setSaveGaze] = useState(false);
+    const saveGazeRef = useRef(saveGaze);
 
     const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -33,7 +35,7 @@ export default function GazeManager({ roomId, userName }) {
           }
             
           const currentTime = Date.now();
-          if (currentTime - lastInsertTime >= 500) {
+          if (currentTime - lastInsertTime >= 500 && saveGazeRef.current) {
             // Calculate average gaze data over the 1-second interval
       
             lastInsertTime = currentTime;
@@ -51,6 +53,7 @@ export default function GazeManager({ roomId, userName }) {
               if (error) {
                 console.error('Error inserting gaze data:', error);
               } else {
+                console.log("saveGaze: ", saveGazeRef.current);
                 console.log('Gaze data inserted successfully');
                 console.log('Gaze data:', x, y);
               }
@@ -67,7 +70,13 @@ export default function GazeManager({ roomId, userName }) {
         setIsWebGazerLoaded(true);
       };
 
+      useEffect(() => {
+        saveGazeRef.current = saveGaze; // Update the ref whenever saveGaze changes
+    }, [saveGaze]);
+
     useEffect(() => {
+
+      console.log("roomId: ", roomId);
         // handler object
         const handleEvent = (ev) => {
           if (ev.code === 'KeyG' && ev.ctrlKey) {
@@ -79,13 +88,14 @@ export default function GazeManager({ roomId, userName }) {
           }
           if (ev.code === 'KeyA' && ev.ctrlKey) {
             setShowCalibrationGuide(false);
+            setSaveGaze(true);
           }
         };
         window.addEventListener('keyup', handleEvent);
         return () => {
           window.removeEventListener('keyup', handleEvent);
         };
-      }, []);
+      }, [roomId, userName]);
 
 
     
