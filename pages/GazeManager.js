@@ -79,7 +79,7 @@ export default function GazeManager({ roomId, userName }) {
       console.log("roomId: ", roomId);
         // handler object
         const handleEvent = (ev) => {
-          if (ev.code === 'KeyG' && ev.ctrlKey) {
+          if (ev.code === 'KeyG' && ev.ctrlKey || ev.code === 'KeyG' && ev.code === 'KeyH') {
             if (isWebGazerLoaded) {
               console.log('WebGazer is already loaded.');
               return;
