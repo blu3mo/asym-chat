@@ -100,6 +100,7 @@ export default function Home() {
       setUserAMessages([...userAMessages, newMessageA]);
       setUserBMessages([...userBMessages, newMessageB]);
     }
+    
   
     // Clear the input field
     if (user === 'User A') {
